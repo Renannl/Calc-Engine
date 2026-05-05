@@ -1,17 +1,18 @@
 from decimal import Decimal
 from dataclasses import dataclass
-
 from shared.utils.money import money
+from domain.constants.tax_rates import (
+    ICMS,
+    PIS,
+    COFINS,
+    IPI,
+    DIFAL_ICMS,
+)
 
 
 @dataclass
 class PricingInput:
     custo_base: Decimal
-    icms: Decimal
-    pis: Decimal
-    cofins: Decimal
-    ipi: Decimal
-    difal_icms: Decimal
     lucro_desejado: Decimal
 
 
@@ -20,7 +21,9 @@ class PricingResult:
     preco_venda_sem_ipi: Decimal
     valor_ipi: Decimal
     preco_venda_com_ipi: Decimal
+    preco_venda_com_icms: Decimal
     lucro_estimado: Decimal
+    lucro_porcentagem: Decimal
 
 
 class PricingCalculator:
@@ -33,26 +36,15 @@ class PricingCalculator:
                 "Custo base deve ser maior que zero"
             )
 
-        percentages = {
-            "ICMS": data.icms,
-            "PIS": data.pis,
-            "COFINS": data.cofins,
-            "IPI": data.ipi,
-            "DIFAL_ICMS": data.difal_icms,
-            "LUCRO": data.lucro_desejado,
-        }
+        if data.lucro_desejado < 0:
+            raise ValueError(
+                "Lucro desejado não pode ser negativo"
+            )
 
-        for field, value in percentages.items():
-
-            if value < 0:
-                raise ValueError(
-                    f"{field} não pode ser negativo"
-                )
-
-            if value > 1:
-                raise ValueError(
-                    f"{field} não pode ser maior que 100%"
-                )
+        if data.lucro_desejado > 1:
+            raise ValueError(
+                "Lucro desejado não pode ser maior que 100%"
+            )
 
     @staticmethod
     def _calculate_net_factor(
@@ -60,10 +52,10 @@ class PricingCalculator:
     ) -> Decimal:
 
         factor = Decimal("1") - (
-            data.icms
-            + data.pis
-            + data.cofins
-            + data.difal_icms
+            ICMS
+            + PIS
+            + COFINS
+            + DIFAL_ICMS
             + data.lucro_desejado
         )
 
@@ -90,20 +82,31 @@ class PricingCalculator:
         )
 
         valor_ipi = money(
-            preco_venda_sem_ipi * data.ipi
+            preco_venda_sem_ipi * IPI
         )
 
         preco_venda_com_ipi = money(
             preco_venda_sem_ipi + valor_ipi
         )
 
+        preco_venda_com_icms = money(
+            preco_venda_sem_ipi * ICMS
+        )
+
         lucro_estimado = money(
             preco_venda_sem_ipi * data.lucro_desejado
         )
+
+        lucro_porcentagem = money(
+            lucro_estimado / data.custo_base
+        )
+        
 
         return PricingResult(
             preco_venda_sem_ipi=preco_venda_sem_ipi,
             valor_ipi=valor_ipi,
             preco_venda_com_ipi=preco_venda_com_ipi,
             lucro_estimado=lucro_estimado,
+            lucro_porcentagem=lucro_porcentagem,
+            preco_venda_com_icms=preco_venda_com_icms
         )

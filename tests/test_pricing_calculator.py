@@ -11,12 +11,7 @@ def make_valid_input(**overrides):
 
     data = {
         "custo_base": Decimal("108.9"),
-        "icms": Decimal("0.036"),
-        "pis": Decimal("0.0165"),
-        "cofins": Decimal("0.0925"),
-        "ipi": Decimal("0.05"),
-        "difal_icms": Decimal("0.06"),
-        "lucro_desejado": Decimal("0.50"),
+        "lucro_desejado": Decimal("0.79"),
     }
 
     data.update(overrides)
@@ -30,4 +25,9 @@ def test_should_calculate_price_correctly():
 
     result = PricingCalculator.calculate(data)
 
-    assert result.preco_venda_sem_ipi == Decimal("369.15")
+    assert result.preco_venda_sem_ipi == Decimal("21780.00")
+    assert result.valor_ipi == Decimal("1089.00")
+    assert result.preco_venda_com_ipi == Decimal("22869.00")
+    assert result.preco_venda_com_icms == Decimal("784.08")
+    assert result.lucro_estimado == Decimal("17206.20")
+    assert result.lucro_porcentagem == Decimal("158.00")
